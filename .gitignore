@@ -1,0 +1,26 @@
+# Environment variables (NEVER push secrets/API keys to GitHub)
+.env
+*.env
+.env.local
+
+# Virtual environments
+venv/
+.venv/
+scripts/venv/
+env/
+
+# Python cache & build outputs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Node / Frontend build outputs
+node_modules/
+dist/
+build/
+.cache/
+
+# OS specific files
+.DS_Store
+Thumbs.db

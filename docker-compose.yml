@@ -1,0 +1,71 @@
+services:
+  # --- SEARCH BACKEND FOR DATAHUB ---
+  elasticsearch:
+    image: elasticsearch:7.10.1
+    container_name: dataguardian-elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+
+  # --- DATAHUB GMS ---
+  datahub-gms:
+    image: acryldata/datahub-gms:latest
+    container_name: dataguardian-datahub-gms
+    ports:
+      - "8080:8080"
+    environment:
+      - DATAHUB_REST_SINGLE_SYSTEM_USER_AUTH_ENABLED=false
+      # Force complete bypass of all dockerize pre-flight wait checks
+      - SKIP_ELASTICSEARCH_CHECK=true
+      - SKIP_EBEAN_CHECK=true
+      - SKIP_KAFKA_CHECK=true
+      - SKIP_NEO4J_CHECK=true
+      - SKIP_CASSANDRA_CHECK=true
+      - GRAPH_SERVICE_IMPL=elasticsearch
+      # Non-empty fallback host definitions to satisfy bash variable parsing
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_PROTOCOL=http
+      - EBEAN_DATASOURCE_HOST=elasticsearch:9200
+      - NEO4J_HOST=http://elasticsearch:9200
+      - KAFKA_BOOTSTRAP_SERVER=elasticsearch:9200
+      # In-memory H2 database
+      - EBEAN_DATASOURCE_DRIVER=org.h2.Driver
+      - EBEAN_DATASOURCE_URL=jdbc:h2:mem:datahub;DB_CLOSE_DELAY=-1
+      - EBEAN_DATASOURCE_USERNAME=sa
+      - EBEAN_DATASOURCE_PASSWORD=
+    depends_on:
+      - elasticsearch
+
+  # --- DATAHUB MCP SERVER ---
+  datahub-mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: dataguardian-mcp-server
+    environment:
+      - DATAHUB_GMS_URL=http://datahub-gms:8080
+    ports:
+      - "5005:5005"
+    depends_on:
+      - datahub-gms
+
+  # --- FASTAPI BACKEND SERVICE ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dataguardian-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATAHUB_GMS_URL=http://datahub-gms:8080
+      - DATAHUB_MCP_HOST=datahub-mcp-server
+      - DATAHUB_MCP_PORT=5005
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - datahub-mcp-server
