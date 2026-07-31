@@ -87,8 +87,6 @@ backend/app/
   graph/workflow.py  LangGraph wiring and routing
 ```
 
-See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the full rationale behind each change
-and known assumptions to verify against your DataHub GMS version.
 
 ---
 
